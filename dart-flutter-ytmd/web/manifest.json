@@ -1,6 +1,6 @@
 {
-    "name": "ytmd",
-    "short_name": "ytmd",
+    "name": "YouTube Music Desktop",
+    "short_name": "YouTube Music Desktop",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
