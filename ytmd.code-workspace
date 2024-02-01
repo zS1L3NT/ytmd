@@ -1,0 +1,24 @@
+{
+	"folders": [
+		{
+			"path": "dart-flutter-ytmd"
+		},
+		{
+			"path": "ts-bun-ytmd"
+		},
+		{
+			"path": "."
+		}
+	],
+	"settings": {
+		"files.exclude": {
+			"**/.git": true,
+			"**/.svn": true,
+			"**/.hg": true,
+			"**/CVS": true,
+			"**/.DS_Store": true,
+			"**/Thumbs.db": true,
+			"*-ytmd": true
+		}
+	}
+}
