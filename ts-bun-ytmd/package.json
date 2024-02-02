@@ -4,6 +4,7 @@
 	"license": "GPL-3.0",
 	"scripts": {
 		"start": "bun src/app.ts",
+		"build": "bun build --compile --outfile ../dart-flutter-ytmd/bin/ytmd src/app.ts",
 		"lint": "tsc --noEmit && rm tsconfig.tsbuildinfo && eslint src --fix && prettier src --write"
 	},
 	"dependencies": {
