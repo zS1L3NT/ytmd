@@ -4,7 +4,7 @@ const directory = process.execPath.replace(/\/ytmd$/, "")
 const iframefile = Bun.file(`${directory}/iframe.js`)
 const playerfile = Bun.file(`${directory}/player.js`)
 
-console.time("YouTube Music API: Initialization")
+console.time("YouTube Music API Initialization")
 let init = true
 let iframejs = (await iframefile.exists()) ? await iframefile.text() : ""
 let playerjs = (await playerfile.exists()) ? await playerfile.text() : ""
@@ -30,8 +30,16 @@ const api = await Innertube.create({
 	},
 })
 init = false
-console.timeEnd("YouTube Music API: Initialization")
+console.timeEnd("YouTube Music API Initialization")
 
-console.time(`YouTube Music API: ${Bun.argv[2]}`)
-console.log(JSON.stringify(await eval(Bun.argv[2] || "")))
-console.timeEnd(`YouTube Music API: ${Bun.argv[2]}`)
+console.time(`YouTube Music API Call`)
+const args = Bun.argv.slice(3).map(a => {
+	try {
+		return JSON.parse(a)
+	} catch {
+		return a
+	}
+})
+// @ts-ignore
+console.log(JSON.stringify(await api[Bun.argv[2]](...args)))
+console.timeEnd(`YouTube Music API Call`)

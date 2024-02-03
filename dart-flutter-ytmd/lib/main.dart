@@ -23,17 +23,11 @@ void main() async {
   await file.writeAsBytes(bytes);
   await Process.run("chmod", ["755", file.path]);
 
-  final process1 = await Process.run(
-    file.path,
-    ["api.getInfo('v7bnOxV4jAc').then(i => i.basic_info.title)"],
-  );
+  final process1 = await Process.run(file.path, ["getInfo", "v7bnOxV4jAc"]);
   print("stdout1: " + process1.stdout);
   print("stderr1: " + process1.stderr);
 
-  final process2 = await Process.run(
-    file.path,
-    ["api.getInfo('v7bnOxV4jAc').then(i => i.basic_info.title)"],
-  );
+  final process2 = await Process.run(file.path, ["getInfo", "v7bnOxV4jAc"]);
   print("stdout2: " + process2.stdout);
   print("stderr2: " + process2.stderr);
 
