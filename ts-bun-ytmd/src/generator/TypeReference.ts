@@ -1,10 +1,9 @@
 import fs from "fs"
-import path from "path"
 
 export type TypeUID = `<${string} ${"=>" | "->"} ${string}>`
 
 export default class TypeReference {
-	private static base = path.join(import.meta.dir, "../../youtubei.js/dist/src/")
+	static base = ""
 
 	constructor(
 		public readonly filepath: string,

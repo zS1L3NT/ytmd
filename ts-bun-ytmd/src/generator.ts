@@ -2,13 +2,14 @@ import path from "path"
 
 import Definition from "./generator/Definition"
 import Storage from "./generator/Storage"
+import TypeReference from "./generator/TypeReference"
+
+const base = path.join(import.meta.dir, "../node_modules/youtubei.js/dist/src/")
+TypeReference.base = base
 
 const storage = new Storage()
 
-const definition = new Definition(
-	path.join(import.meta.dir, "../youtubei.js/dist/src/Innertube.d.ts"),
-)
-
+const definition = new Definition(path.join(base, "Innertube.d.ts"))
 for (const _import of definition.getImports().values()) {
 	storage.register(_import)
 }
