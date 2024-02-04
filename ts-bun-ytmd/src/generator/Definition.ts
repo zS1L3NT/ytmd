@@ -10,16 +10,19 @@ export default class Definition {
 		if (!fs.existsSync(filepath)) throw new Error(`File doesn't exist: ${filepath}`)
 	}
 
-	private getDefinitionFilepath(filepath: string, name: string) {
+	private getDefinitionTypeReference(filepath: string, name: string): TypeReference {
 		const definition = new Definition(filepath)
-		const exports = definition.getExports()
+		const exports = [...definition.getExports().values()]
 
-		const reference = [...exports.values()].find(tr => tr.name === name)!
-		if (reference) {
-			return reference.filepath
+		if (name === "default") {
+			const _export = exports.find(tr => tr._default)
+			if (_export) return _export
+			throw new Error(`Couldn't find default export in ${filepath}`)
+		} else {
+			const _export = exports.find(tr => tr.name === name)
+			if (_export) return _export
+			throw new Error(`Couldn't find export "${name}" in ${filepath}`)
 		}
-
-		throw new Error(`Couldn't find type ${name} in ${filepath}`)
 	}
 
 	getImports() {
@@ -35,27 +38,16 @@ export default class Definition {
 				continue
 			}
 
-			const definition = new Definition(filepath)
-			const exports = [...definition.getExports().values()]
 			if (values!.match(/{ .* }/)) {
-				for (const nameWithAlias of values!.replace(/{ |} |type /g, "").split(", ")) {
-					// Runs for every import for one file
-					const [name, , alias] = nameWithAlias.split(" ") as [string, string?, string?]
-					const type = new TypeReference(
-						this.getDefinitionFilepath(filepath, name),
-						name,
-						exports.find(e => e.name === name)!._default,
-					)
+				for (const nameWithAlias of values!.replace(/{ | }|type /g, "").split(", ")) {
+					const [name, , alias] = nameWithAlias.split(" ")
+					const type = this.getDefinitionTypeReference(filepath, name!)
 
 					if (alias) this.aliases.set(alias, type.uid)
 					imports.set(type.uid, type)
 				}
 			} else {
-				const type = new TypeReference(
-					this.getDefinitionFilepath(filepath, values!),
-					values!,
-					true,
-				)
+				const type = this.getDefinitionTypeReference(filepath, "default")
 
 				this.aliases.set(values!, type.uid)
 				imports.set(type.uid, type)
@@ -80,16 +72,11 @@ export default class Definition {
 				continue
 			}
 
-			for (const nameWithAlias of values!.replaceAll(/[{}] /g, "").split(", ")) {
-				const [name, , alias] = nameWithAlias.split(" ") as [string, string?, string?]
+			for (const nameWithAlias of values!.replaceAll(/{ | }/g, "").split(", ")) {
+				const [name, , alias] = nameWithAlias.split(" ")
+				const type = this.getDefinitionTypeReference(filepath, name!)
 
-				const realname = name === "default" ? alias! : name
-				const type = new TypeReference(
-					definition.getDefinitionFilepath(filepath, realname),
-					realname,
-					name === "default",
-				)
-
+				if (alias) this.aliases.set(alias, type.uid)
 				exports.set(type.uid, type)
 			}
 		}
