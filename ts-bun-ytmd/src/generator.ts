@@ -10,8 +10,6 @@ storage.definition(path.join(Storage.base, "Innertube.d.ts"))
 // storage.definition(path.join(Storage.base, "parser/youtube/index.d.ts"))
 // storage.definition(path.join(Storage.base, "parser/ytshorts/index.d.ts"))
 
-storage.__dump()
-
 // for (const type of ["InnertubeConfig", "InnerTubeClient", "SearchFilters", "Innertube"]) {
 // 	read("./Innertube.d.ts", type)
 // }
