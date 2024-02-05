@@ -90,7 +90,7 @@ export default class Definition {
 			}
 		}
 
-		for (const [, name] of content.matchAll(/^export(?: declare)? type (\w+) =/gm)) {
+		for (const [, name] of content.matchAll(/^export(?: declare)? type (\w+)(?:<.*?>)? =/gm)) {
 			const type = new TypeReference(this.filepath, name!, false)
 			this.exports.set(type.uid, type)
 		}
