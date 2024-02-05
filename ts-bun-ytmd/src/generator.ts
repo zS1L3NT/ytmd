@@ -1,18 +1,15 @@
 import path from "path"
 
-import Definition from "./generator/Definition"
 import Storage from "./generator/Storage"
-import TypeReference from "./generator/TypeReference"
-
-const base = path.join(import.meta.dir, "../node_modules/youtubei.js/dist/src/")
-TypeReference.base = base
 
 const storage = new Storage()
+Storage.instance = storage
+Storage.base = path.join(import.meta.dir, "../youtubei.js/dist/src/")
 
-const definition = new Definition(path.join(base, "Innertube.d.ts"))
-for (const _import of definition.getImports().values()) {
-	storage.register(_import)
-}
+storage.definition(path.join(Storage.base, "Innertube.d.ts"))
+// storage.definition(path.join(Storage.base, "core/Session.d.ts")).getImports()
+// storage.definition(path.join(Storage.base, "parser/youtube/index.d.ts"))
+// storage.definition(path.join(Storage.base, "parser/ytshorts/index.d.ts"))
 
 storage.__dump()
 

@@ -1,10 +1,10 @@
 import fs from "fs"
 
+import Storage from "./Storage"
+
 export type TypeUID = `<${string} ${"=>" | "->"} ${string}>`
 
 export default class TypeReference {
-	static base = ""
-
 	constructor(
 		public readonly filepath: string,
 		public readonly name: string,
@@ -14,6 +14,6 @@ export default class TypeReference {
 	}
 
 	get uid(): TypeUID {
-		return `<${this.filepath.replace(TypeReference.base, "./")} ${this._default ? "=>" : "->"} ${this.name}>`
+		return `<${this.filepath.replace(Storage.base, "./")} ${this._default ? "=>" : "->"} ${this.name}>`
 	}
 }

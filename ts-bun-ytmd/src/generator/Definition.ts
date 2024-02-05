@@ -1,6 +1,7 @@
 import fs from "fs"
 import path from "path"
 
+import Storage from "./Storage"
 import TypeReference, { TypeUID } from "./TypeReference"
 
 export default class Definition {
@@ -11,7 +12,7 @@ export default class Definition {
 	}
 
 	private getDefinitionTypeReference(filepath: string, name: string): TypeReference {
-		const definition = new Definition(filepath)
+		const definition = Storage.instance.definition(filepath)
 		const exports = [...definition.getExports().values()]
 
 		if (name === "default") {
@@ -64,7 +65,7 @@ export default class Definition {
 		const exportFromRegex = /^export ((?:.|\n)*?) from ['"](.*)['"];$/gm
 		for (const [, values, from] of content.matchAll(exportFromRegex)) {
 			const filepath = path.join(this.filepath, "..", from!).replace(/\.js$/, ".d.ts")
-			const definition = new Definition(filepath)
+			const definition = Storage.instance.definition(filepath)
 			if (values === "*") {
 				for (const [uid, type] of definition.getExports()) {
 					exports.set(uid, type)
