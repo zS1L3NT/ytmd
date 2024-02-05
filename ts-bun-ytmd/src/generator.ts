@@ -7,7 +7,6 @@ Storage.instance = storage
 Storage.base = path.join(import.meta.dir, "../youtubei.js/dist/src/")
 
 storage.definition(path.join(Storage.base, "Innertube.d.ts"))
-// storage.definition(path.join(Storage.base, "core/Session.d.ts")).getImports()
 // storage.definition(path.join(Storage.base, "parser/youtube/index.d.ts"))
 // storage.definition(path.join(Storage.base, "parser/ytshorts/index.d.ts"))
 

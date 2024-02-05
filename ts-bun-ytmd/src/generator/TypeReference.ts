@@ -6,9 +6,9 @@ export type TypeUID = `<${string} ${"=>" | "->"} ${string}>`
 
 export default class TypeReference {
 	constructor(
-		public readonly filepath: string,
-		public readonly name: string,
-		public readonly _default: boolean,
+		readonly filepath: string,
+		readonly name: string,
+		readonly _default: boolean,
 	) {
 		if (!fs.existsSync(filepath)) throw new Error(`File doesn't exist: ${filepath}`)
 	}

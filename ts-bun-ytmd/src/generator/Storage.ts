@@ -14,8 +14,6 @@ export default class Storage {
 	}
 
 	definition(filepath: string) {
-		console.log(filepath)
-
 		if (!this.definitions.has(filepath)) {
 			this.definitions.set(filepath, new Definition(filepath))
 		}
