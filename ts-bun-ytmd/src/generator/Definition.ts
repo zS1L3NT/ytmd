@@ -2,17 +2,20 @@ import fs from "fs"
 import path from "path"
 
 import Storage from "./Storage"
+import Type from "./Type"
 import TypeReference, { TypeUID } from "./TypeReference"
 
 export default class Definition {
 	private readonly content: string
 	readonly aliases: Map<string, TypeUID> = new Map()
 	private _imports: Map<TypeUID, TypeReference> | null = null
-	private _exports: Map<TypeUID, TypeReference> | null = null
+	private _exports: Map<TypeUID, TypeReference | Type> | null = null
 
 	constructor(readonly filepath: string) {
 		if (!fs.existsSync(filepath)) throw new Error(`File doesn't exist: ${filepath}`)
-		this.content = fs.readFileSync(this.filepath, "utf-8")
+		this.content = fs
+			.readFileSync(this.filepath, "utf-8")
+			.replaceAll(/\/\*\*(?:.|\n)*?\*\//g, "")
 	}
 
 	private getDefinitionTypeReference(filepath: string, name: string): TypeReference {
@@ -70,62 +73,90 @@ export default class Definition {
 
 	get exports() {
 		if (!this._exports) {
-			this._exports = new Map<TypeUID, TypeReference>()
+			this._exports = new Map<TypeUID, TypeReference | Type>()
 
-			const exportFromRegex = /^export(?: type)? ((?:.|\n)*?) from ['"](.*)['"];$/gm
-			for (const [, values, from] of this.content.matchAll(exportFromRegex)) {
-				// Weird edge case for ./utils/FormatUtils.d.ts
-				if (values!.includes("export ")) continue
+			const lines = this.content
+				.split(/\nexport /)
+				.slice(1)
+				.map(l => l.replaceAll("\n", "").replaceAll("    ", ""))
+			for (const line of lines) {
+				const exportFromRegex = /^(.*) from '(.*)';$/
+				if (line.match(exportFromRegex)) {
+					const [, values, from] = line.match(exportFromRegex)!
 
-				const filepath = path.join(this.filepath, "..", from!).replace(/\.js$/, ".d.ts")
-				const definition = Storage.instance.definition(filepath)
+					const filepath = path.join(this.filepath, "..", from!).replace(/\.js$/, ".d.ts")
+					const definition = Storage.instance.definition(filepath)
 
-				if (values === "*") {
-					for (const [uid, type] of definition.exports) {
-						this._exports.set(uid, type)
+					if (values === "*") {
+						for (const [uid, type] of definition.exports) {
+							this._exports.set(uid, type)
+						}
+						continue
 					}
+
+					if (values!.match(/^\* as \w+$/)) {
+						console.log(`Skipping wildcard rename import: ${values}`)
+						continue
+					}
+
+					for (const nameWithAlias of values!.replaceAll(/{ | }/g, "").split(", ")) {
+						const [name, , alias] = nameWithAlias.split(" ")
+						const type = this.getDefinitionTypeReference(filepath, name!)
+
+						if (alias) this.aliases.set(alias, type.uid)
+						this._exports.set(type.uid, type)
+					}
+
 					continue
 				}
 
-				if (values!.match(/\* as \w+/)) {
-					console.log(`Skipping wildcard rename import: ${values}`)
-					continue
-				}
-
-				for (const nameWithAlias of values!.replaceAll(/{ | }/g, "").split(", ")) {
-					const [name, , alias] = nameWithAlias.split(" ")
-					const type = this.getDefinitionTypeReference(filepath, name!)
-
-					if (alias) this.aliases.set(alias, type.uid)
+				const exportTypeRegex = /^(?:declare )?type (\w+)(?:<.*?>)? =(.*);$/
+				if (line.match(exportTypeRegex)) {
+					const [, name, content] = line.match(exportTypeRegex)!
+					const type = Type.parseType(this.filepath, name!, content!)
 					this._exports.set(type.uid, type)
+					continue
 				}
-			}
 
-			for (const [, name] of this.content.matchAll(
-				/^export(?: declare)? type (\w+)(?:<.*?>)? =/gm,
-			)) {
-				const type = new TypeReference(this.filepath, name!, false)
-				this._exports.set(type.uid, type)
-			}
+				const exportInterfaceRegex = /^(?:declare )?interface (\w+)(.*)$/
+				if (line.match(exportInterfaceRegex)) {
+					const [, name, content] = line.match(exportInterfaceRegex)!
+					const type = Type.parseInterface(this.filepath, name!, content!)
+					this._exports.set(type.uid, type)
+					continue
+				}
 
-			for (const [, name] of this.content.matchAll(
-				/^export(?: declare)? interface (\w+)/gm,
-			)) {
-				const type = new TypeReference(this.filepath, name!, false)
-				this._exports.set(type.uid, type)
-			}
+				const exportEnumRegex = /^(?:declare )?enum (\w+)(.*)$/
+				if (line.match(exportEnumRegex)) {
+					const [, name, content] = line.match(exportEnumRegex)!
+					const type = Type.parseEnum(this.filepath, name!, content!)
+					this._exports.set(type.uid, type)
+					continue
+				}
 
-			for (const [, _default, name] of this.content.matchAll(
-				/^export(?: declare)?( default)? class (\w+)/gm,
-			)) {
-				const type = new TypeReference(this.filepath, name!, !!_default)
-				this._exports.set(type.uid, type)
-			}
+				const exportInlineClassRegex = /^(?:declare )?(default )?class (\w+)(.*)$/
+				if (line.match(exportInlineClassRegex)) {
+					const [, _default, name, content] = line.match(exportInlineClassRegex)!
+					const type = Type.parseClass(this.filepath, name!, content!, !!_default)
+					this._exports.set(type.uid, type)
+					continue
+				}
 
-			const defaultMatch = this.content.match(/^export(?: default)? (\w+);$/m)
-			if (defaultMatch) {
-				const type = new TypeReference(this.filepath, defaultMatch[1]!, true)
-				this._exports.set(type.uid, type)
+				const exportOnlyClassRegex = /^default (\w+);$/
+				if (line.match(exportOnlyClassRegex)) {
+					const [, name] = line.match(exportOnlyClassRegex)!
+					const content = this.content
+						.split(/\n(declare|export) /)
+						.slice(1)
+						.map(l => l.replaceAll("\n", "").replaceAll("    ", ""))
+						.map(l => l.match(/^class (\w+)(.*)$/))
+						.find(m => m && m[1] === name)![2]
+					const type = Type.parseClass(this.filepath, name!, content!, true)
+					this._exports.set(type.uid, type)
+					continue
+				}
+
+				throw new Error(`Couldn't parse export: ${line}`)
 			}
 		}
 

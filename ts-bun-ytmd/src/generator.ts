@@ -6,9 +6,14 @@ const storage = new Storage()
 Storage.instance = storage
 Storage.base = path.join(import.meta.dir, "../youtubei.js/dist/src/")
 
-storage.definition(path.join(Storage.base, "Innertube.d.ts"))
-// storage.definition(path.join(Storage.base, "parser/youtube/index.d.ts"))
-// storage.definition(path.join(Storage.base, "parser/ytshorts/index.d.ts"))
+storage.definition(path.join(Storage.base, "Innertube.d.ts")).exports
+storage.definition(path.join(Storage.base, "parser/continuations.d.ts")).exports
+storage.definition(path.join(Storage.base, "core/Session.d.ts")).exports
+storage.definition(path.join(Storage.base, "parser/index.d.ts")).exports
+storage.definition(path.join(Storage.base, "parser/youtube/index.d.ts")).exports
+storage.definition(path.join(Storage.base, "parser/ytshorts/index.d.ts")).exports
+
+console.log("")
 
 // for (const type of ["InnertubeConfig", "InnerTubeClient", "SearchFilters", "Innertube"]) {
 // 	read("./Innertube.d.ts", type)
