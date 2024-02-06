@@ -78,14 +78,14 @@ export default class Definition {
 							const [name, , alias] = nameWithAlias.split(" ")
 							const type = this.getDefinitionTypeReference(filepath, name!)
 
-							if (alias) this.aliases.set(alias, type.uid)
-							this._imports.set(type.uid, type)
+							if (alias) this.aliases.set(alias, type.id)
+							this._imports.set(type.id, type)
 						}
 					} else {
 						const type = this.getDefinitionTypeReference(filepath, "default")
 
-						this.aliases.set(values!, type.uid)
-						this._imports.set(type.uid, type)
+						this.aliases.set(values!, type.id)
+						this._imports.set(type.id, type)
 					}
 
 					continue
@@ -125,8 +125,8 @@ export default class Definition {
 					const definition = Storage.instance.definition(filepath)
 
 					if (values === "*") {
-						for (const [uid, type] of definition.exports) {
-							this._exports.set(uid, type)
+						for (const [id, type] of definition.exports) {
+							this._exports.set(id, type)
 						}
 						continue
 					}
@@ -140,8 +140,8 @@ export default class Definition {
 						const [name, , alias] = nameWithAlias.split(" ")
 						const type = this.getDefinitionTypeReference(filepath, name!)
 
-						if (alias) this.aliases.set(alias, type.uid)
-						this._exports.set(type.uid, type)
+						if (alias) this.aliases.set(alias, type.id)
+						this._exports.set(type.id, type)
 					}
 
 					continue
@@ -157,9 +157,9 @@ export default class Definition {
 						`${variant} ${name}${content}`,
 					)
 					if (_export) {
-						this._exports.set(type.uid, type)
+						this._exports.set(type.id, type)
 					} else {
-						locals.set(type.uid, type)
+						locals.set(type.id, type)
 					}
 					continue
 				}
@@ -174,7 +174,7 @@ export default class Definition {
 					}
 
 					this._exports.set(
-						type.uid,
+						type.id,
 						new Type(type.filepath, type.name, true, type.content),
 					)
 					continue

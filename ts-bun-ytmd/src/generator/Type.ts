@@ -14,7 +14,7 @@ export default class Type {
 		if (!fs.existsSync(filepath)) throw new Error(`File doesn't exist: ${filepath}`)
 	}
 
-	get uid(): TypeID {
+	get id(): TypeID {
 		return `<${this.filepath.replace(Storage.base, "./")} ${this._default ? "=>" : "->"} ${this.name}>`
 	}
 }
