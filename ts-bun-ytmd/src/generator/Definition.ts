@@ -74,15 +74,25 @@ export default class Definition {
 	get exports() {
 		if (!this._exports) {
 			this._exports = new Map<TypeUID, TypeReference | Type>()
+			const locals = new Map<TypeUID, TypeReference>()
 
-			const lines = this.content
-				.split(/\nexport /)
-				.slice(1)
-				.map(l => l.replaceAll("\n", "").replaceAll("    ", ""))
-			for (const line of lines) {
-				const exportFromRegex = /^(.*) from '(.*)';$/
-				if (line.match(exportFromRegex)) {
-					const [, values, from] = line.match(exportFromRegex)!
+			let chunk = ""
+			const values: string[] = []
+			for (const line of this.content.split("\n")) {
+				if (line.startsWith("import")) continue
+				if (line.match(/^\w+ /)) {
+					if (chunk) values.push(chunk)
+					chunk = line
+				} else {
+					chunk += line
+				}
+			}
+			values.push(chunk)
+
+			for (const value of values) {
+				let match: RegExpMatchArray | null = null
+				if ((match = value.match(/^export (.*) from '(.*)';$/))) {
+					const [, values, from] = match
 
 					const filepath = path.join(this.filepath, "..", from!).replace(/\.js$/, ".d.ts")
 					const definition = Storage.instance.definition(filepath)
@@ -110,53 +120,71 @@ export default class Definition {
 					continue
 				}
 
-				const exportTypeRegex = /^(?:declare )?type (\w+)(?:<.*?>)? =(.*);$/
-				if (line.match(exportTypeRegex)) {
-					const [, name, content] = line.match(exportTypeRegex)!
-					const type = Type.parseType(this.filepath, name!, content!)
-					this._exports.set(type.uid, type)
+				if ((match = value.match(/^(export )?(?:declare )?type (\w+)(.*)$/))) {
+					const [, _export, name, content] = match
+					const type = Type.parseType(this.filepath, name!, `type ${name}${content}`)
+					if (_export) {
+						this._exports.set(type.uid, type)
+					} else {
+						locals.set(type.uid, type)
+					}
 					continue
 				}
 
-				const exportInterfaceRegex = /^(?:declare )?interface (\w+)(.*)$/
-				if (line.match(exportInterfaceRegex)) {
-					const [, name, content] = line.match(exportInterfaceRegex)!
-					const type = Type.parseInterface(this.filepath, name!, content!)
-					this._exports.set(type.uid, type)
+				if ((match = value.match(/^(export )?(?:declare )?interface (\w+)(.*)$/))) {
+					const [, _export, name, content] = match
+					const type = Type.parseInterface(
+						this.filepath,
+						name!,
+						`interface ${name}${content}`,
+					)
+					if (_export) {
+						this._exports.set(type.uid, type)
+					} else {
+						locals.set(type.uid, type)
+					}
 					continue
 				}
 
-				const exportEnumRegex = /^(?:declare )?enum (\w+)(.*)$/
-				if (line.match(exportEnumRegex)) {
-					const [, name, content] = line.match(exportEnumRegex)!
-					const type = Type.parseEnum(this.filepath, name!, content!)
-					this._exports.set(type.uid, type)
+				if ((match = value.match(/^(export )?(?:declare )?enum (\w+)(.*)$/))) {
+					const [, _export, name, content] = match
+					const type = Type.parseEnum(this.filepath, name!, `enum ${name}${content}`)
+					if (_export) {
+						this._exports.set(type.uid, type)
+					} else {
+						locals.set(type.uid, type)
+					}
 					continue
 				}
 
-				const exportInlineClassRegex = /^(?:declare )?(default )?class (\w+)(.*)$/
-				if (line.match(exportInlineClassRegex)) {
-					const [, _default, name, content] = line.match(exportInlineClassRegex)!
-					const type = Type.parseClass(this.filepath, name!, content!, !!_default)
-					this._exports.set(type.uid, type)
+				if ((match = value.match(/^(export )?(?:declare )?(default )?class (\w+)(.*)$/))) {
+					const [, _export, _default, name, content] = match
+					const type = Type.parseClass(
+						this.filepath,
+						name!,
+						`class ${name}${content}`,
+						!!_default,
+					)
+					if (_export) {
+						this._exports.set(type.uid, type)
+					} else {
+						locals.set(type.uid, type)
+					}
 					continue
 				}
 
-				const exportOnlyClassRegex = /^default (\w+);$/
-				if (line.match(exportOnlyClassRegex)) {
-					const [, name] = line.match(exportOnlyClassRegex)!
-					const content = this.content
-						.split(/\n(declare|export) /)
-						.slice(1)
-						.map(l => l.replaceAll("\n", "").replaceAll("    ", ""))
-						.map(l => l.match(/^class (\w+)(.*)$/))
-						.find(m => m && m[1] === name)![2]
-					const type = Type.parseClass(this.filepath, name!, content!, true)
-					this._exports.set(type.uid, type)
+				if ((match = value.match(/^export default (\w+);$/))) {
+					const [, name] = match
+
+					console.log({ name, locals })
 					continue
 				}
 
-				throw new Error(`Couldn't parse export: ${line}`)
+				if (value.match(/^(export )?(declare )?function /)) {
+					continue
+				}
+
+				throw new Error(`Couldn't parse value in ${this.filepath}: ${value}`)
 			}
 		}
 
