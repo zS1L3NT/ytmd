@@ -42,29 +42,46 @@ export default class Definition {
 		if (!this._imports) {
 			this._imports = new Map<TypeUID, TypeReference>()
 
-			const importRegex = /^import(?: type)? ((?:.|\n)*?) from ['"](.*)['"];$/gm
-			for (const [, values, from] of this.content.matchAll(importRegex)) {
-				// Runs for every line that imports content from one file
-				const filepath = path.join(this.filepath, "..", from!).replace(/\.js$/, ".d.ts")
-				if (!from!.endsWith(".js")) {
-					console.log(`Skipping library import: ${from}`)
+			let chunk = ""
+			const values: string[] = []
+			for (const line of this.content.split("\n")) {
+				if (!line.startsWith("import")) continue
+				if (line.match(/^\w+ /)) {
+					if (chunk) values.push(chunk)
+					chunk = line
+				} else {
+					chunk += line
+				}
+			}
+			if (chunk) values.push(chunk)
+
+			for (const value of values) {
+				let match: RegExpMatchArray | null = null
+				if ((match = value.match(/^import (?:type )?(.*) from '(.*)';$/))) {
+					const [, values, from] = match
+					const filepath = path.join(this.filepath, "..", from!).replace(/\.js$/, ".d.ts")
+
+					if (values!.match(/{ .* }/)) {
+						for (const nameWithAlias of values!
+							.replace(/{ | }|type /g, "")
+							.split(", ")) {
+							const [name, , alias] = nameWithAlias.split(" ")
+							const type = this.getDefinitionTypeReference(filepath, name!)
+
+							if (alias) this.aliases.set(alias, type.uid)
+							this._imports.set(type.uid, type)
+						}
+					} else {
+						const type = this.getDefinitionTypeReference(filepath, "default")
+
+						this.aliases.set(values!, type.uid)
+						this._imports.set(type.uid, type)
+					}
+
 					continue
 				}
 
-				if (values!.match(/{ .* }/)) {
-					for (const nameWithAlias of values!.replace(/{ | }|type /g, "").split(", ")) {
-						const [name, , alias] = nameWithAlias.split(" ")
-						const type = this.getDefinitionTypeReference(filepath, name!)
-
-						if (alias) this.aliases.set(alias, type.uid)
-						this._imports.set(type.uid, type)
-					}
-				} else {
-					const type = this.getDefinitionTypeReference(filepath, "default")
-
-					this.aliases.set(values!, type.uid)
-					this._imports.set(type.uid, type)
-				}
+				throw new Error(`Couldn't parse import in ${this.filepath}: ${value}`)
 			}
 		}
 
@@ -74,7 +91,7 @@ export default class Definition {
 	get exports() {
 		if (!this._exports) {
 			this._exports = new Map<TypeUID, TypeReference | Type>()
-			const locals = new Map<TypeUID, TypeReference>()
+			const locals = new Map<TypeUID, Type>()
 
 			let chunk = ""
 			const values: string[] = []
@@ -87,11 +104,11 @@ export default class Definition {
 					chunk += line
 				}
 			}
-			values.push(chunk)
+			if (chunk) values.push(chunk)
 
 			for (const value of values) {
 				let match: RegExpMatchArray | null = null
-				if ((match = value.match(/^export (.*) from '(.*)';$/))) {
+				if ((match = value.match(/^export (?:type )?(.*) from '(.*)';$/))) {
 					const [, values, from] = match
 
 					const filepath = path.join(this.filepath, "..", from!).replace(/\.js$/, ".d.ts")
@@ -120,50 +137,14 @@ export default class Definition {
 					continue
 				}
 
-				if ((match = value.match(/^(export )?(?:declare )?type (\w+)(.*)$/))) {
-					const [, _export, name, content] = match
-					const type = Type.parseType(this.filepath, name!, `type ${name}${content}`)
-					if (_export) {
-						this._exports.set(type.uid, type)
-					} else {
-						locals.set(type.uid, type)
-					}
-					continue
-				}
-
-				if ((match = value.match(/^(export )?(?:declare )?interface (\w+)(.*)$/))) {
-					const [, _export, name, content] = match
-					const type = Type.parseInterface(
+				// prettier-ignore
+				if ((match = value.match(/^(export )?(?:declare )?(default )?(type|interface|enum|class|function|const) (\w+)(.*)$/))) {
+					const [, _export, _default, variant, name, content] = match
+					const type = new Type(
 						this.filepath,
 						name!,
-						`interface ${name}${content}`,
-					)
-					if (_export) {
-						this._exports.set(type.uid, type)
-					} else {
-						locals.set(type.uid, type)
-					}
-					continue
-				}
-
-				if ((match = value.match(/^(export )?(?:declare )?enum (\w+)(.*)$/))) {
-					const [, _export, name, content] = match
-					const type = Type.parseEnum(this.filepath, name!, `enum ${name}${content}`)
-					if (_export) {
-						this._exports.set(type.uid, type)
-					} else {
-						locals.set(type.uid, type)
-					}
-					continue
-				}
-
-				if ((match = value.match(/^(export )?(?:declare )?(default )?class (\w+)(.*)$/))) {
-					const [, _export, _default, name, content] = match
-					const type = Type.parseClass(
-						this.filepath,
-						name!,
-						`class ${name}${content}`,
 						!!_default,
+						`${variant} ${name}${content}`,
 					)
 					if (_export) {
 						this._exports.set(type.uid, type)
@@ -175,16 +156,25 @@ export default class Definition {
 
 				if ((match = value.match(/^export default (\w+);$/))) {
 					const [, name] = match
+					const type = [...locals.values()].find(l => l.name === name)
+					if (!type) {
+						throw new Error(
+							`Couldn't find default exported value "${name}" in ${this.filepath}`,
+						)
+					}
 
-					console.log({ name, locals })
+					this._exports.set(
+						type.uid,
+						new Type(type.filepath, type.name, true, type.content),
+					)
 					continue
 				}
 
-				if (value.match(/^(export )?(declare )?function /)) {
+				if ((match = value.match(/^export {};$/))) {
 					continue
 				}
 
-				throw new Error(`Couldn't parse value in ${this.filepath}: ${value}`)
+				throw new Error(`Couldn't parse export in ${this.filepath}: ${value}`)
 			}
 		}
 
