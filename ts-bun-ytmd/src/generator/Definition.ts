@@ -17,6 +17,17 @@ export default class Definition {
 			.replaceAll(/\/\*\*(?:.|\n)*?\*\//g, "")
 	}
 
+	type(name: string) {
+		if (this.aliases.has(name)) {
+			name = this.aliases.get(name)!
+		}
+
+		const type = [...this.imports.values(), ...this.exports.values()].find(t => t.name === name)
+		if (type) return type
+
+		throw new Error(`Couldn't find type "${name}" in ${this.filepath}`)
+	}
+
 	private getDefinitionTypeReference(filepath: string, name: string): Type {
 		const definition = Storage.instance.definition(filepath)
 		const exports = [...definition.exports.values()]
