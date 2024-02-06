@@ -2,14 +2,13 @@ import fs from "fs"
 import path from "path"
 
 import Storage from "./Storage"
-import Type from "./Type"
-import TypeReference, { TypeUID } from "./TypeReference"
+import Type, { TypeID } from "./Type"
 
 export default class Definition {
 	private readonly content: string
-	readonly aliases: Map<string, TypeUID> = new Map()
-	private _imports: Map<TypeUID, TypeReference> | null = null
-	private _exports: Map<TypeUID, TypeReference | Type> | null = null
+	readonly aliases: Map<string, TypeID> = new Map()
+	private _imports: Map<TypeID, Type> | null = null
+	private _exports: Map<TypeID, Type> | null = null
 
 	constructor(readonly filepath: string) {
 		if (!fs.existsSync(filepath)) throw new Error(`File doesn't exist: ${filepath}`)
@@ -18,7 +17,7 @@ export default class Definition {
 			.replaceAll(/\/\*\*(?:.|\n)*?\*\//g, "")
 	}
 
-	private getDefinitionTypeReference(filepath: string, name: string): TypeReference {
+	private getDefinitionTypeReference(filepath: string, name: string): Type {
 		const definition = Storage.instance.definition(filepath)
 		const exports = [...definition.exports.values()]
 
@@ -40,7 +39,7 @@ export default class Definition {
 
 	get imports() {
 		if (!this._imports) {
-			this._imports = new Map<TypeUID, TypeReference>()
+			this._imports = new Map<TypeID, Type>()
 
 			let chunk = ""
 			const values: string[] = []
@@ -90,8 +89,8 @@ export default class Definition {
 
 	get exports() {
 		if (!this._exports) {
-			this._exports = new Map<TypeUID, TypeReference | Type>()
-			const locals = new Map<TypeUID, Type>()
+			this._exports = new Map<TypeID, Type>()
+			const locals = new Map<TypeID, Type>()
 
 			let chunk = ""
 			const values: string[] = []
