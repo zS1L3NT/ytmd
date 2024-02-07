@@ -56,13 +56,6 @@ export default class Parser {
 				}
 			}
 
-			if (pair[0] === `[`) {
-				return {
-					expression: Parser.parseArray(pair).expression,
-					count,
-				}
-			}
-
 			if (pair[0] === `{`) {
 				return {
 					expression: Parser.parseObject(pair).expression,
@@ -70,7 +63,16 @@ export default class Parser {
 				}
 			}
 
-			throw new Error(`Invalid type: ${value}`)
+			if (pair[0] === `[` || pair[0] === `<`) {
+				return {
+					expression: {
+						type: "unknown",
+					},
+					count,
+				}
+			}
+
+			throw new Error(`Invalid pair: ${pair}`)
 		}
 
 		console.log("READTYPE", { value })
@@ -80,22 +82,6 @@ export default class Parser {
 				type: "unknown",
 			},
 			count,
-		}
-	}
-
-	private static parseArray(content: string): {
-		expression: ArrayExpression
-		count: number
-	} {
-		const curr = content
-		const expression: ArrayExpression = {
-			type: "array",
-			values: [],
-		}
-
-		return {
-			expression,
-			count: content.length - curr.length,
 		}
 	}
 
