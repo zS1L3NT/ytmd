@@ -132,7 +132,6 @@ export default class Definition {
 					}
 
 					if (values!.match(/^\* as \w+$/)) {
-						console.log(`Skipping wildcard rename import: ${values}`)
 						continue
 					}
 
