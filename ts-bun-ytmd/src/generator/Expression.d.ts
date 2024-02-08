@@ -19,8 +19,8 @@ declare type LiteralExpression = {
 }
 
 declare type PrimitiveExpression = {
-	type: "literal"
-	value: "string" | "number" | "boolean" | "null"
+	type: "primitive"
+	value: "string" | "number" | "boolean" | "null" | "undefined"
 }
 
 declare type ArrayExpression = {

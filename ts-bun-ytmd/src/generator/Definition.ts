@@ -17,15 +17,13 @@ export default class Definition {
 			.replaceAll(/\/\*\*(?:.|\n)*?\*\//g, "")
 	}
 
-	type(name: string) {
+	type(name: string): Type | null {
 		if (this.aliases.has(name)) {
 			name = this.aliases.get(name)!
 		}
 
-		const type = [...this.imports.values(), ...this.exports.values()].find(t => t.name === name)
-		if (type) return type
-
-		throw new Error(`Couldn't find type "${name}" in ${this.filepath}`)
+		const types = [...this.imports.values(), ...this.exports.values()]
+		return types.find(t => t.name === name) ?? null
 	}
 
 	private getDefinitionTypeReference(filepath: string, name: string): Type {

@@ -38,7 +38,9 @@ export default class Type {
 	private parseType(definition: Definition) {
 		const [full, generic] = this.content.match(/^type \w+(?:<(.*?)>)? = /)!
 
-		return Parser.parse(this.content.slice(full.length)).expression
+		if (generic) console.log("GENERIC DEFINITION", { generic })
+
+		return new Parser(definition).parse(this.content.slice(full.length)).expression
 	}
 
 	private parseInterface(definition: Definition) {

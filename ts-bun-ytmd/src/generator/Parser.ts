@@ -1,12 +1,16 @@
+import Definition from "./Definition"
+
 export default class Parser {
-	static parse(content: string): {
+	constructor(private readonly definition: Definition) {}
+
+	parse(content: string): {
 		expression: Expression
 		count: number
 	} {
-		const { values, delimeter, count } = Parser.split(content)
+		const { values, delimeter, count } = this.split(content)
 
 		if (delimeter) {
-			const expressions = values.map(v => Parser.parse(v).expression)
+			const expressions = values.map(v => this.parse(v).expression)
 			if (delimeter === "|") {
 				return {
 					expression: {
@@ -27,12 +31,8 @@ export default class Parser {
 		}
 
 		if (values.length !== 1) {
-			return {
-				expression: {
-					type: "unknown",
-				},
-				count,
-			}
+			console.log("UNKNOWN KEYWORDS", { values })
+			return { expression: { type: "unknown" }, count }
 		}
 
 		const value = values[0]!
@@ -40,22 +40,23 @@ export default class Parser {
 			return {
 				expression: {
 					type: "array",
-					value: Parser.parse(value.slice(0, -2)).expression,
+					value: this.parse(value.slice(0, -2)).expression,
 				},
 				count,
 			}
 		}
 
-		const pair = Parser.pair(value)
+		const pair = this.pair(value)
 		if (pair) {
 			let expression: Expression
 			if (pair[0] === `'` || pair[0] === `"`) {
 				expression = { type: "literal", value: pair.slice(1, -1) }
 			} else if (pair[0] === `(`) {
-				expression = Parser.parse(pair.slice(1, -1)).expression
+				expression = this.parse(pair.slice(1, -1)).expression
 			} else if (pair[0] === `{`) {
-				expression = Parser.parseObject(pair).expression
+				expression = this.parseObject(pair).expression
 			} else if (pair[0] === `[` || pair[0] === `<`) {
+				console.log("UNKNOWN PAIR", { pair })
 				expression = { type: "unknown" }
 			} else {
 				throw new Error(`Invalid pair: ${pair}`)
@@ -64,17 +65,62 @@ export default class Parser {
 			return { expression, count }
 		}
 
-		console.log("READTYPE", { value })
+		if (["string", "number", "boolean", "null", "undefined"].includes(value)) {
+			return {
+				expression: { type: "primitive", value: value as PrimitiveExpression["value"] },
+				count,
+			}
+		}
 
-		return {
-			expression: {
-				type: "unknown",
-			},
-			count,
+		const match = value.match(/^(\w+)(?:<(.*)>)?$/)
+		if (!match) {
+			console.log("UNKNOWN TYPE", { value })
+			return {
+				expression: { type: "unknown" },
+				count,
+			}
+		}
+
+		const [, name, generic] = match
+
+		if (generic) {
+			console.log("GENERIC VALUE", { generic })
+		}
+
+		const type = this.definition.type(name!)
+		if (type) {
+			return {
+				expression: {
+					type: "type",
+					reference: type,
+				},
+				count,
+			}
+		}
+
+		switch (name) {
+			case "Partial":
+				return {
+					expression: {
+						type: "object",
+						value: Object.fromEntries(
+							Object.entries(this.parseObject(generic!).expression.value).map(
+								([k, v]) => [k.endsWith("?") ? k + "?" : k, v],
+							),
+						),
+					},
+					count,
+				}
+			default:
+				console.log("UNKNOWN TYPE", { name })
+				return {
+					expression: { type: "unknown" },
+					count,
+				}
 		}
 	}
 
-	private static parseObject(content: string): {
+	private parseObject(content: string): {
 		expression: ObjectExpression
 		count: number
 	} {
@@ -103,7 +149,7 @@ export default class Parser {
 			let match: RegExpMatchArray | null = null
 			if ((match = curr.match(/^(\w+\??): /))) {
 				const [full, key] = match
-				const { expression: _expression, count } = Parser.parse(curr.slice(full.length))
+				const { expression: _expression, count } = this.parse(curr.slice(full.length))
 
 				expression.value[key!] = _expression
 				curr = curr.slice(full.length + count)
@@ -125,7 +171,7 @@ export default class Parser {
 	 * @param content Content to split
 	 * @returns Values split, delimeter used and characters used
 	 */
-	private static split(content: string): {
+	private split(content: string): {
 		values: string[]
 		delimeter: "|" | "&" | null
 		count: number
@@ -158,7 +204,7 @@ export default class Parser {
 				continue
 			}
 
-			let pair = Parser.pair(curr)
+			let pair = this.pair(curr)
 			if (pair) {
 				let value = ""
 				let nextchar: string | undefined = ""
@@ -166,7 +212,7 @@ export default class Parser {
 					value += pair
 					nextchar = curr[pair.length]
 					curr = curr.slice(pair.length)
-					pair = Parser.pair(curr)
+					pair = this.pair(curr)
 				} while (pair && nextchar && !" ;|&".includes(nextchar))
 				values.push(value)
 				continue
@@ -175,7 +221,7 @@ export default class Parser {
 			let match: RegExpMatchArray | null = null
 			if ((match = curr.match(/^(\w+)/))) {
 				const value = match[1]!
-				const pair = Parser.pair(curr.slice(value!.length))
+				const pair = this.pair(curr.slice(value!.length))
 				const length = value.length + (pair?.length ?? 0)
 
 				const nextchar = curr[length]
@@ -205,7 +251,7 @@ export default class Parser {
 	 * @param content Content to find pairs in
 	 * @returns
 	 */
-	private static pair(content: string): string | null {
+	private pair(content: string): string | null {
 		const pairs = {
 			'"': '"',
 			"'": "'",
