@@ -108,6 +108,15 @@ export default class Parser {
 					},
 					count,
 				}
+			case "Record":
+				return {
+					expression: {
+						type: "object",
+						properties: {},
+						dynamic: this.parse(generic!.split(",")[1]!).expression,
+					},
+					count,
+				}
 			case "Promise":
 				return {
 					expression: {
