@@ -108,6 +108,14 @@ export default class Parser {
 					},
 					count,
 				}
+			case "Promise":
+				return {
+					expression: {
+						type: "promise",
+						value: this.parse(generic!).expression,
+					},
+					count,
+				}
 			default:
 				console.log("UNKNOWN TYPE", { name })
 				return {

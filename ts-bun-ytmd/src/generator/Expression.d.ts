@@ -4,6 +4,7 @@ declare type Expression =
 	| PrimitiveExpression
 	| ArrayExpression
 	| ObjectExpression
+	| PromiseExpression
 	| UnionExpression
 	| IntersectionExpression
 	| UnknownExpression
@@ -32,6 +33,11 @@ declare type ObjectExpression = {
 	type: "object"
 	properties: { [key: string]: Expression }
 	dynamic?: Expression
+}
+
+declare type PromiseExpression = {
+	type: "promise"
+	value: Expression
 }
 
 declare type UnionExpression = {

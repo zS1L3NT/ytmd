@@ -16,7 +16,9 @@ for (const file of files) {
 	const definition = storage.definition(path.join(Storage.base, file))
 	for (const [, type] of definition.exports) {
 		console.log(`${"-".repeat(50)}START${"-".repeat(50)}`)
+		console.log(type.id)
 		console.log("FINAL", JSON.stringify(type.parse(definition), null, 2))
+		console.log(type.id)
 		console.log(`${"-".repeat(50)} END ${"-".repeat(50)}`)
 	}
 }
