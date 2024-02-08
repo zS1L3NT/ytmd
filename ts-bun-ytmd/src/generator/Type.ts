@@ -44,7 +44,11 @@ export default class Type {
 	}
 
 	private parseInterface(definition: Definition) {
-		return { type: "unknown" } satisfies Expression
+		const [full, generic] = this.content.match(/^interface \w+(?:<(.*?)>)? /)!
+
+		if (generic) console.log("GENERIC DEFINITION", { generic })
+
+		return new Parser(definition).parse(this.content.slice(full.length)).expression
 	}
 
 	private parseEnum(definition: Definition) {

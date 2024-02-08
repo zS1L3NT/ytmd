@@ -65,9 +65,9 @@ export default class Parser {
 			return { expression, count }
 		}
 
-		if (["string", "number", "boolean", "null", "undefined"].includes(value)) {
+		if (["string", "number", "boolean", "null", "undefined", "any"].includes(value)) {
 			return {
-				expression: { type: "primitive", value: value as PrimitiveExpression["value"] },
+				expression: { type: "primitive", kind: value as PrimitiveExpression["kind"] },
 				count,
 			}
 		}
@@ -75,10 +75,7 @@ export default class Parser {
 		const match = value.match(/^(\w+)(?:<(.*)>)?$/)
 		if (!match) {
 			console.log("UNKNOWN TYPE", { value })
-			return {
-				expression: { type: "unknown" },
-				count,
-			}
+			return { expression: { type: "unknown" }, count }
 		}
 
 		const [, name, generic] = match
@@ -103,8 +100,8 @@ export default class Parser {
 				return {
 					expression: {
 						type: "object",
-						value: Object.fromEntries(
-							Object.entries(this.parseObject(generic!).expression.value).map(
+						properties: Object.fromEntries(
+							Object.entries(this.parseObject(generic!).expression.properties).map(
 								([k, v]) => [k.endsWith("?") ? k + "?" : k, v],
 							),
 						),
@@ -127,7 +124,7 @@ export default class Parser {
 		let curr = content
 		const expression: ObjectExpression = {
 			type: "object",
-			value: {},
+			properties: {},
 		}
 
 		if (curr[0] !== "{") throw new Error(`Invalid object: ${content}`)
@@ -135,6 +132,7 @@ export default class Parser {
 
 		while (curr.length) {
 			const char = curr[0]!
+			let pair: string | null = null
 
 			if (char === " ") {
 				curr = curr.slice(1)
@@ -146,13 +144,39 @@ export default class Parser {
 				break
 			}
 
+			// Property
 			let match: RegExpMatchArray | null = null
 			if ((match = curr.match(/^(\w+\??): /))) {
-				const [full, key] = match
-				const { expression: _expression, count } = this.parse(curr.slice(full.length))
+				curr = curr.slice(match[0].length)
+				const { expression: _expression, count } = this.parse(curr)
 
-				expression.value[key!] = _expression
-				curr = curr.slice(full.length + count)
+				expression.properties[match[1]!] = _expression
+				curr = curr.slice(count)
+				continue
+			}
+
+			// Dynamic property
+			match = curr.match(/^\[.*?\]: /)
+			pair = this.pair(curr)
+			if (match && pair?.[0] === "[") {
+				curr = curr.slice(pair.length + ": ".length)
+				const { expression: _expression, count } = this.parse(curr)
+
+				expression.dynamic = _expression
+				curr = curr.slice(count)
+				continue
+			}
+
+			// Function property
+			match = curr.match(/^(\w+\??)/)
+			pair = this.pair(curr.slice(match?.[0]?.length))
+			if (
+				match &&
+				pair?.[0] === "(" &&
+				curr.slice(match![0]!.length + pair.length).match(/^: /)
+			) {
+				curr = curr.slice(match![0]!.length + pair.length + ": ".length)
+				curr = curr.slice(this.parse(curr).count)
 				continue
 			}
 
@@ -221,13 +245,13 @@ export default class Parser {
 			let match: RegExpMatchArray | null = null
 			if ((match = curr.match(/^(\w+)/))) {
 				const value = match[1]!
-				const pair = this.pair(curr.slice(value!.length))
-				const length = value.length + (pair?.length ?? 0)
+				curr = curr.slice(value.length)
 
-				const nextchar = curr[length]
+				const pair = this.pair(curr)
+				const nextchar = curr[pair?.length ?? 0]
 				if (!nextchar || nextchar === " " || nextchar === ";") {
 					values.push(value + (pair ?? ""))
-					curr = curr.slice(length)
+					curr = curr.slice(pair?.length ?? 0)
 					continue
 				} else {
 					throw new Error(`Invalid content: ${content}`)

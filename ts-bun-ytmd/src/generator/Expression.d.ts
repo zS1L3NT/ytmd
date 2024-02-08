@@ -20,7 +20,7 @@ declare type LiteralExpression = {
 
 declare type PrimitiveExpression = {
 	type: "primitive"
-	value: "string" | "number" | "boolean" | "null" | "undefined"
+	kind: "string" | "number" | "boolean" | "null" | "undefined" | "any"
 }
 
 declare type ArrayExpression = {
@@ -30,7 +30,8 @@ declare type ArrayExpression = {
 
 declare type ObjectExpression = {
 	type: "object"
-	value: { [key: string]: Expression }
+	properties: { [key: string]: Expression }
+	dynamic?: Expression
 }
 
 declare type UnionExpression = {
