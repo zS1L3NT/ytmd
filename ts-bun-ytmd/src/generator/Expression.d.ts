@@ -25,7 +25,7 @@ declare type PrimitiveExpression = {
 
 declare type ArrayExpression = {
 	type: "array"
-	values: Expression[]
+	value: Expression
 }
 
 declare type ObjectExpression = {

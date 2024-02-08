@@ -36,43 +36,32 @@ export default class Parser {
 		}
 
 		const value = values[0]!
+		if (value.endsWith("[]")) {
+			return {
+				expression: {
+					type: "array",
+					value: Parser.parse(value.slice(0, -2)).expression,
+				},
+				count,
+			}
+		}
 
 		const pair = Parser.pair(value)
 		if (pair) {
+			let expression: Expression
 			if (pair[0] === `'` || pair[0] === `"`) {
-				return {
-					expression: {
-						type: "literal",
-						value: pair.slice(1, -1),
-					},
-					count,
-				}
+				expression = { type: "literal", value: pair.slice(1, -1) }
+			} else if (pair[0] === `(`) {
+				expression = Parser.parse(pair.slice(1, -1)).expression
+			} else if (pair[0] === `{`) {
+				expression = Parser.parseObject(pair).expression
+			} else if (pair[0] === `[` || pair[0] === `<`) {
+				expression = { type: "unknown" }
+			} else {
+				throw new Error(`Invalid pair: ${pair}`)
 			}
 
-			if (pair[0] === `(`) {
-				return {
-					expression: Parser.parse(pair.slice(1, -1)).expression,
-					count,
-				}
-			}
-
-			if (pair[0] === `{`) {
-				return {
-					expression: Parser.parseObject(pair).expression,
-					count,
-				}
-			}
-
-			if (pair[0] === `[` || pair[0] === `<`) {
-				return {
-					expression: {
-						type: "unknown",
-					},
-					count,
-				}
-			}
-
-			throw new Error(`Invalid pair: ${pair}`)
+			return { expression, count }
 		}
 
 		console.log("READTYPE", { value })
@@ -158,10 +147,28 @@ export default class Parser {
 				break
 			}
 
-			const pair = Parser.pair(curr)
+			if (char === "|" || char === "&") {
+				if (delimeter === null) {
+					delimeter = char
+				} else if (char !== delimeter) {
+					throw new Error(`Cannot use both | and & in the same expression: ${content}`)
+				}
+
+				curr = curr.slice(1)
+				continue
+			}
+
+			let pair = Parser.pair(curr)
 			if (pair) {
-				values.push(pair)
-				curr = curr.slice(pair.length)
+				let value = ""
+				let nextchar: string | undefined = ""
+				do {
+					value += pair
+					nextchar = curr[pair.length]
+					curr = curr.slice(pair.length)
+					pair = Parser.pair(curr)
+				} while (pair && nextchar && !" ;|&".includes(nextchar))
+				values.push(value)
 				continue
 			}
 
@@ -181,17 +188,6 @@ export default class Parser {
 				}
 			}
 
-			if (char === "|" || char === "&") {
-				if (delimeter === null) {
-					delimeter = char
-				} else if (char !== delimeter) {
-					throw new Error(`Cannot use both | and & in the same expression: ${content}`)
-				}
-
-				curr = curr.slice(1)
-				continue
-			}
-
 			console.log({ content })
 			throw new Error(`Invalid content: ${content}`)
 		}
@@ -204,7 +200,7 @@ export default class Parser {
 	}
 
 	/**
-	 * Find pairs of characters like ', ", (, [, {, < in a string
+	 * Find pairs of characters like `'`, `"`, `(`, `[`, `{`, `<` in a string
 	 *
 	 * @param content Content to find pairs in
 	 * @returns
