@@ -18,12 +18,13 @@ export default class Definition {
 	}
 
 	type(name: string): Type | null {
-		if (this.aliases.has(name)) {
-			name = this.aliases.get(name)!
-		}
-
 		const types = [...this.imports.values(), ...this.exports.values()]
-		return types.find(t => t.name === name) ?? null
+
+		if (this.aliases.has(name)) {
+			return types.find(t => t.id === this.aliases.get(name)!) ?? null
+		} else {
+			return types.find(t => t.name === name) ?? null
+		}
 	}
 
 	private getDefinitionTypeReference(filepath: string, name: string): Type {
