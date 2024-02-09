@@ -65,7 +65,7 @@ export default class Parser {
 			return { expression, count }
 		}
 
-		if (["string", "number", "boolean", "null", "undefined", "any"].includes(value)) {
+		if (["Date", "string", "number", "boolean", "null", "undefined", "any"].includes(value)) {
 			return {
 				expression: { type: "primitive", kind: value as PrimitiveExpression["kind"] },
 				count,

@@ -21,7 +21,7 @@ declare type LiteralExpression = {
 
 declare type PrimitiveExpression = {
 	type: "primitive"
-	kind: "string" | "number" | "boolean" | "null" | "undefined" | "any"
+	kind: "Date" | "string" | "number" | "boolean" | "null" | "undefined" | "any"
 }
 
 declare type ArrayExpression = {
