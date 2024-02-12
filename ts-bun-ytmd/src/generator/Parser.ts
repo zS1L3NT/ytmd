@@ -6,12 +6,24 @@ export default class Parser {
 		readonly generic?: string,
 	) {}
 
+	/**
+	 * General function to parse a string into an expression
+	 *
+	 * @param content Content to parse
+	 * @returns The parsed expression and characters in {@link content} used to parse it
+	 */
 	parse(content: string): {
 		expression: Expression
 		count: number
 	} {
 		const { values, delimeter, count } = this.split(content)
 
+		/**
+		 * If the split content is actually delimeter separated, then we return a union or intersection
+		 *
+		 * @example
+		 * A<T> | B | C
+		 */
 		if (delimeter) {
 			const expressions = values.map(v => this.parse(v).expression)
 			if (delimeter === "|") {
@@ -33,11 +45,23 @@ export default class Parser {
 			}
 		}
 
+		/**
+		 * If the split content is more than one keyword
+		 *
+		 * @example
+		 * typeof fetch
+		 */
 		if (values.length !== 1) {
-			console.log("UNKNOWN KEYWORDS", { values })
+			console.log("UNKNOWN KEYWORDS", { keywords: values })
 			return { expression: { type: "unknown" }, count }
 		}
 
+		/**
+		 * If the expression is an array of itself, parse the array item
+		 *
+		 * @example
+		 * string[]
+		 */
 		const value = values[0]!
 		if (value.endsWith("[]")) {
 			return {
@@ -49,6 +73,18 @@ export default class Parser {
 			}
 		}
 
+		/**
+		 * If the expression is a pair
+		 *   parse as a string literal if '' or ""
+		 *   parse as an expression if ()
+		 *   parse as an object if {}
+		 *   unknown if [] or <>
+		 *
+		 * @example
+		 * "hello"
+		 * ("hello")
+		 * { hello: "world" }
+		 */
 		const pair = this.pair(value)
 		if (pair) {
 			let expression: Expression
@@ -68,6 +104,9 @@ export default class Parser {
 			return { expression, count }
 		}
 
+		/**
+		 * If the expression is a primitive, return the primitive
+		 */
 		if (["Date", "string", "number", "boolean", "null", "undefined", "any"].includes(value)) {
 			return {
 				expression: { type: "primitive", kind: value as PrimitiveExpression["kind"] },
@@ -75,16 +114,25 @@ export default class Parser {
 			}
 		}
 
+		/**
+		 * If the expression is downright a generic, return the generic reference
+		 */
 		if (value === this.generic) {
 			return { expression: { type: "generic" }, count }
 		}
 
+		/**
+		 * If the expression is more than just a word with a possible generic, then return unknown
+		 */
 		const match = value.match(/^(\w+)(?:<(.*)>)?$/)
 		if (!match) {
-			console.log("UNKNOWN TYPE", { value })
+			console.log("UNKNOWN EXPRESSION", { expression: value })
 			return { expression: { type: "unknown" }, count }
 		}
 
+		/**
+		 * If the name of the expression is a defined type, return the type reference
+		 */
 		const [, name, generic] = match
 		const type = this.definition.type(name!)
 		if (type) {
@@ -108,6 +156,9 @@ export default class Parser {
 			}
 		}
 
+		/**
+		 * Lastly, switch between primitive library types
+		 */
 		switch (name) {
 			case "Partial":
 				return {
@@ -138,15 +189,24 @@ export default class Parser {
 					},
 					count,
 				}
-			default:
-				console.log("UNKNOWN TYPE", { name })
-				return {
-					expression: { type: "unknown" },
-					count,
-				}
+		}
+
+		/**
+		 * If really all fails, return unknown type
+		 */
+		console.log("UNKNOWN TYPE", { type: name, generic })
+		return {
+			expression: { type: "unknown" },
+			count,
 		}
 	}
 
+	/**
+	 * Specialised function to parse a string into a JSON object
+	 *
+	 * @param content Content to parse
+	 * @returns The parsed object expression and characters in {@link content} used to parse it
+	 */
 	private parseObject(content: string): {
 		expression: ObjectExpression
 		count: number
@@ -220,10 +280,11 @@ export default class Parser {
 	}
 
 	/**
-	 * Handles all the splitting of an expression into | and & if used
+	 * General function for handling all the splitting of an expression into | and & if any
 	 *
 	 * @param content Content to split
 	 * @returns Values split, delimeter used and characters used
+	 * @returns The parsed values, delimeter used to split and characters in {@link content} used to split
 	 */
 	private split(content: string): {
 		values: string[]
@@ -300,10 +361,10 @@ export default class Parser {
 	}
 
 	/**
-	 * Find pairs of characters like `'`, `"`, `(`, `[`, `{`, `<` in a string
+	 * General function for finding pairs of characters like `'`, `"`, `(`, `[`, `{`, `<` in a string
 	 *
 	 * @param content Content to find pairs in
-	 * @returns
+	 * @returns The first pair of characters found
 	 */
 	private pair(content: string): string | null {
 		const pairs = {
