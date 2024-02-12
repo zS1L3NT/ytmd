@@ -11,13 +11,19 @@ const files = [
 	"core/Session.d.ts",
 	"types/PlatformShim.d.ts",
 	"parser/index.d.ts",
+	"parser/continuations.d.ts",
+	"parser/youtube/index.d.ts",
+	"parser/ytshorts/index.d.ts",
 ]
 for (const file of files) {
 	const definition = storage.definition(path.join(Storage.base, file))
 	for (const [, type] of definition.exports) {
 		console.log(`${"-".repeat(50)}START${"-".repeat(50)}`)
 		console.log(type.id)
-		console.log("FINAL", JSON.stringify(type.parse(storage.definition(type.filepath))))
+
+		const parsed = type.parse(storage.definition(type.filepath))
+		console.log("FINAL", JSON.stringify(parsed))
+
 		console.log(type.id)
 		console.log(`${"-".repeat(50)} END ${"-".repeat(50)}`)
 	}

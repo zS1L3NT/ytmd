@@ -26,10 +26,11 @@ export default class Type {
 				return this.parseType(definition)
 			case "interface":
 				return this.parseInterface(definition)
-			case "enum":
-				return this.parseEnum(definition)
 			case "class":
 				return this.parseClass(definition)
+			case "enum":
+				console.log("Skipping enum", { name: this.name })
+				return { type: "unknown" }
 			default:
 				throw new Error(`Invalid content: ${this.content}`)
 		}
@@ -55,11 +56,11 @@ export default class Type {
 		return new Parser(definition, generic).parse(this.content.slice(full.length)).expression
 	}
 
-	private parseEnum(definition: Definition) {
-		return { type: "unknown" } satisfies Expression
-	}
-
 	private parseClass(definition: Definition) {
-		return { type: "unknown" } satisfies Expression
+		const [full, generic, _extends] = this.content.match(
+			/^class \w+(?:<(.*?)>)?(?: extends (\w+(?:<.*?>)?))? /,
+		)!
+
+		return new Parser(definition, generic).parseClass(this.content.slice(full.length), _extends)
 	}
 }

@@ -202,6 +202,18 @@ export default class Parser {
 	}
 
 	/**
+	 * Specialised function to parse a class's content into an object or unknown expression
+	 *
+	 * @param content Content to parse
+	 * @returns The parsed class as an object or unknown expression
+	 */
+	parseClass(content: string, _extends?: string): ObjectExpression | UnknownExpression {
+		console.log({ content, _extends })
+
+		return { type: "unknown" }
+	}
+
+	/**
 	 * Specialised function to parse a string into a JSON object
 	 *
 	 * @param content Content to parse
