@@ -38,17 +38,21 @@ export default class Type {
 	private parseType(definition: Definition) {
 		const [full, generic] = this.content.match(/^type \w+(?:<(.*?)>)? = /)!
 
-		if (generic) console.log("GENERIC DEFINITION", { generic })
+		if (generic && generic.length > 1) {
+			throw new Error(`Complex generic: ${generic}`)
+		}
 
-		return new Parser(definition).parse(this.content.slice(full.length)).expression
+		return new Parser(definition, generic).parse(this.content.slice(full.length)).expression
 	}
 
 	private parseInterface(definition: Definition) {
 		const [full, generic] = this.content.match(/^interface \w+(?:<(.*?)>)? /)!
 
-		if (generic) console.log("GENERIC DEFINITION", { generic })
+		if (generic && generic.length > 1) {
+			throw new Error(`Complex generic: ${generic}`)
+		}
 
-		return new Parser(definition).parse(this.content.slice(full.length)).expression
+		return new Parser(definition, generic).parse(this.content.slice(full.length)).expression
 	}
 
 	private parseEnum(definition: Definition) {

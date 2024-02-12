@@ -17,7 +17,7 @@ for (const file of files) {
 	for (const [, type] of definition.exports) {
 		console.log(`${"-".repeat(50)}START${"-".repeat(50)}`)
 		console.log(type.id)
-		console.log("FINAL", JSON.stringify(type.parse(storage.definition(type.filepath)), null, 2))
+		console.log("FINAL", JSON.stringify(type.parse(storage.definition(type.filepath))))
 		console.log(type.id)
 		console.log(`${"-".repeat(50)} END ${"-".repeat(50)}`)
 	}

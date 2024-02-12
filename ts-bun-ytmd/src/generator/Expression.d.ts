@@ -1,5 +1,6 @@
 declare type Expression =
 	| TypeReference
+	| GenericReference
 	| LiteralExpression
 	| PrimitiveExpression
 	| ArrayExpression
@@ -12,6 +13,11 @@ declare type Expression =
 declare type TypeReference = {
 	type: "type"
 	reference: Type
+	generic?: Expression
+}
+
+declare type GenericReference = {
+	type: "generic"
 }
 
 declare type LiteralExpression = {

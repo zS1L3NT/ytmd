@@ -1,7 +1,10 @@
 import Definition from "./Definition"
 
 export default class Parser {
-	constructor(private readonly definition: Definition) {}
+	constructor(
+		private readonly definition: Definition,
+		readonly generic?: string,
+	) {}
 
 	parse(content: string): {
 		expression: Expression
@@ -72,6 +75,10 @@ export default class Parser {
 			}
 		}
 
+		if (value === this.generic) {
+			return { expression: { type: "generic" }, count }
+		}
+
 		const match = value.match(/^(\w+)(?:<(.*)>)?$/)
 		if (!match) {
 			console.log("UNKNOWN TYPE", { value })
@@ -79,19 +86,25 @@ export default class Parser {
 		}
 
 		const [, name, generic] = match
-
-		if (generic) {
-			console.log("GENERIC VALUE", { generic })
-		}
-
 		const type = this.definition.type(name!)
 		if (type) {
-			return {
-				expression: {
-					type: "type",
-					reference: type,
-				},
-				count,
+			if (generic) {
+				return {
+					expression: {
+						type: "type",
+						reference: type,
+						generic: this.parse(generic).expression,
+					},
+					count,
+				}
+			} else {
+				return {
+					expression: {
+						type: "type",
+						reference: type,
+					},
+					count,
+				}
 			}
 		}
 
