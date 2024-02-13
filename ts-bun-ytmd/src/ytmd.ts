@@ -1,5 +1,8 @@
 import { Innertube } from "youtubei.js"
+import yargs from "yargs"
+import { hideBin } from "yargs/helpers"
 
+const args = await yargs(hideBin(Bun.argv)).argv
 const directory = process.execPath.replace(/\/ytmd$/, "")
 const iframefile = Bun.file(`${directory}/iframe.js`)
 const playerfile = Bun.file(`${directory}/player.js`)
@@ -9,6 +12,7 @@ let init = true
 let iframejs = (await iframefile.exists()) ? await iframefile.text() : ""
 let playerjs = (await playerfile.exists()) ? await playerfile.text() : ""
 const api = await Innertube.create({
+	cookie: "cookie" in args ? (args.cookie as string) : undefined,
 	fetch: async (url, options) => {
 		if (!init) return fetch(url, options)
 		if (!(url instanceof URL)) throw new Error("URL must be an instance of the URL class")
@@ -33,13 +37,11 @@ init = false
 console.timeEnd("YouTube Music API Initialization")
 
 console.time(`YouTube Music API Call`)
-const args = Bun.argv.slice(3).map(a => {
-	try {
-		return JSON.parse(a)
-	} catch {
-		return a
-	}
+const params = args._.slice(1).map(a => {
+	if (typeof a === "number") return a
+	// prettier-ignore
+	try { return JSON.parse(a) } catch { return a }
 })
 // @ts-ignore
-console.log(JSON.stringify(await api[Bun.argv[2]](...args)))
+console.log(JSON.stringify(await api[args[0]](...params)))
 console.timeEnd(`YouTube Music API Call`)
