@@ -208,9 +208,84 @@ export default class Parser {
 	 * @returns The parsed class as an object or unknown expression
 	 */
 	parseClass(content: string, _extends?: string): ObjectExpression | UnknownExpression {
-		console.log({ content, _extends })
+		if (content[0] !== "{") throw new Error(`Invalid class: ${content}`)
 
-		return { type: "unknown" }
+		let curr = content.slice(1)
+		const expression: ObjectExpression = {
+			type: "object",
+			properties: {},
+		}
+
+		while (curr.length) {
+			const char = curr[0]!
+
+			if (char === " ") {
+				curr = curr.slice(1)
+				continue
+			}
+
+			if (char === "}") {
+				curr = curr.slice(1)
+				break
+			}
+
+			let match: RegExpMatchArray | null = null
+			if ((match = curr.match(/^(\w+ )*(\w+\??)(\(|<)/))) {
+				const [, modifiers, name, bracket] = match
+				curr = curr.slice(modifiers?.length ?? 0)
+				curr = curr.slice(name!.length)
+
+				if (bracket === "<") {
+					curr = curr.slice(this.pair(curr)!.length)
+				}
+
+				curr = curr.slice(this.pair(curr)!.length)
+
+				if (curr.slice(0, 2) === ": ") {
+					curr = curr.slice(2)
+					const { expression: _expression, count } = this.parse(curr)
+
+					curr = curr.slice(count)
+				} else if (curr[0] === ";") {
+					curr = curr.slice(1)
+				} else {
+					throw new Error(`Invalid class property: ${curr}`)
+				}
+
+				continue
+			}
+
+			if ((match = curr.match(/^(\w+ )*(#)?(\w+\??)(: |;)/))) {
+				const [, modifiers, _private, name, next] = match
+				curr = curr.slice(modifiers?.length ?? 0)
+				curr = curr.slice(_private ? 1 : 0)
+				curr = curr.slice(name!.length)
+				curr = curr.slice(next!.length)
+
+				if (next === ";") {
+					if (!_private) {
+						expression.properties[name!] = { type: "unknown" }
+					}
+				} else {
+					const { expression: _expression, count } = this.parse(curr)
+
+					expression.properties[name!] = _expression
+					curr = curr.slice(count)
+				}
+
+				continue
+			}
+
+			if ((match = curr.match(/^(\w+ )+= /))) {
+				curr = curr.slice(match![0]!.length)
+				curr = curr.slice(this.parse(curr)!.count)
+				continue
+			}
+
+			throw new Error(`Invalid class property: ${curr}`)
+		}
+
+		return expression
 	}
 
 	/**
@@ -340,12 +415,18 @@ export default class Parser {
 					nextchar = curr[pair.length]
 					curr = curr.slice(pair.length)
 					pair = this.pair(curr)
-				} while (pair && nextchar && !" ;|&".includes(nextchar))
+				} while (pair && nextchar && !";|&".includes(nextchar))
 				values.push(value)
 				continue
 			}
 
 			let match: RegExpMatchArray | null = null
+			if ((match = curr.match(/^import\(".*?"\)\.\w+(\[\])?/))) {
+				curr = curr.slice(match![0]!.length)
+				values.push(match[0]!)
+				continue
+			}
+
 			if ((match = curr.match(/^(\w+)/))) {
 				const value = match[1]!
 				curr = curr.slice(value.length)
@@ -357,11 +438,10 @@ export default class Parser {
 					curr = curr.slice(pair?.length ?? 0)
 					continue
 				} else {
-					throw new Error(`Invalid content: ${content}`)
+					throw new Error(`Invalid type: ${curr}`)
 				}
 			}
 
-			console.log({ content })
 			throw new Error(`Invalid content: ${content}`)
 		}
 
