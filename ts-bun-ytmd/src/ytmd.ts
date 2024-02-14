@@ -37,11 +37,5 @@ init = false
 console.timeEnd("YouTube Music API Initialization")
 
 console.time(`YouTube Music API Call`)
-const params = args._.slice(1).map(a => {
-	if (typeof a === "number") return a
-	// prettier-ignore
-	try { return JSON.parse(a) } catch { return a }
-})
-// @ts-ignore
-console.log(JSON.stringify(await api[args[0]](...params)))
+console.log(JSON.stringify(await eval(args._[0] as string)))
 console.timeEnd(`YouTube Music API Call`)
